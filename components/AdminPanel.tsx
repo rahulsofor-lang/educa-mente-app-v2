@@ -170,10 +170,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
     URL.revokeObjectURL(url);
   };
 
-  const handleShareWhatsApp = () => {
-    if (!company) return;
-            const vercelAppLink = "https://app-1-e9epyat7b-educa-mentes-projects.vercel.app/"; // Seu link do Vercel
-        const text = `Olá equipe ${company.nomeFantasia}! 🚀
+ const handleShareWhatsApp = () => {
+  if (!company) return;
+
+  const vercelAppLink = "https://educa-mente-app-v2.vercel.app/"; // NOVO LINK do Vercel
+  const text = `Olá equipe ${company.nomeFantasia}! 🚀
 
 Acesse o link abaixo, baixe o app e participe da Avaliação de Riscos Psicossociais da NR-1. Assim você contribui para o bem-estar da nossa empresa. 🧠💙
 
