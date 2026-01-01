@@ -1,3 +1,5 @@
+Copiar
+
 import React, { useState } from 'react';
 import { SurveyResponse, Company } from '../types';
 import { QUESTIONS, OPTIONS } from '../constants';
@@ -12,14 +14,14 @@ interface SurveyProps {
   allResponses: SurveyResponse[];
 }
 
-const Survey: React.FC<SurveyProps> = ({ 
-  currentCompany, 
-  onLogin, 
-  onSubmit, 
-  onBack, 
-  onExitKiosk, 
-  allResponses, 
-  isKioskMode 
+const Survey: React.FC<SurveyProps> = ({
+  currentCompany,
+  onLogin,
+  onSubmit,
+  onBack,
+  onExitKiosk,
+  allResponses,
+  isKioskMode
 }) => {
   const [step, setStep] = useState<'code' | 'info' | 'questions' | 'done'>('code');
   const [accessCode, setAccessCode] = useState('');
@@ -32,7 +34,7 @@ const Survey: React.FC<SurveyProps> = ({
     e.preventDefault();
     const company = onLogin(accessCode.trim());
     if (!company) return alert("Código inválido!");
-    
+
     const count = allResponses.filter(r => r.companyId === company.id).length;
     if (count >= company.totalEmployees) return alert('Limite de respostas atingido para esta unidade.');
 
@@ -57,10 +59,10 @@ const Survey: React.FC<SurveyProps> = ({
       <div className="max-w-md mx-auto mt-10 bg-white p-8 rounded-[40px] shadow-2xl border border-gray-100 text-center animate-fade-in">
         <h2 className="text-xl font-black uppercase text-[#004481] mb-6">Acesso Unidade</h2>
         <form onSubmit={handleCodeSubmit} className="space-y-4">
-          <input 
-            value={accessCode} 
-            onChange={e => setAccessCode(e.target.value)} 
-            placeholder="#CÓDIGO" 
+          <input
+            value={accessCode}
+            onChange={e => setAccessCode(e.target.value)}
+            placeholder="#CÓDIGO"
             className="input-field text-center font-black uppercase"
             required
           />
@@ -110,6 +112,9 @@ const Survey: React.FC<SurveyProps> = ({
       }
     };
 
+    // valor selecionado para a pergunta atual (usado para renderizar estado "selecionado")
+    const selectedValue = answers[q.id];
+
     return (
       <div className="fixed inset-0 bg-[#f8fbff] flex flex-col z-[100] h-screen w-screen overflow-hidden animate-fade-in">
         {/* Progresso */}
@@ -133,25 +138,37 @@ const Survey: React.FC<SurveyProps> = ({
         {/* Botões - Área Inferior (70% da tela, com scroll se necessário) */}
         <div className="flex-grow flex flex-col justify-start p-4 pb-12 sm:pb-8 w-full max-w-md mx-auto space-y-3 overflow-y-auto">
            <div className="grid grid-cols-2 gap-3">
-              {OPTIONS.slice(0, 4).map(opt => (
-                <button
-                  key={opt.value}
-                  onClick={() => handleSelect(opt.value)}
-                  className="bg-white border-2 border-gray-200 p-4 rounded-2xl shadow-sm active:scale-95 active:border-[#004481] transition-all flex flex-col items-center justify-center hover:border-[#004481] h-20"
-                >
-                  <span className="text-xl font-black text-[#004481]">{opt.value}</span>
-                  <span className="text-[9px] font-black uppercase text-gray-400 mt-1">{opt.label}</span>
-                </button>
-              ))}
+              {OPTIONS.slice(0, 4).map(opt => {
+                const isSelected = selectedValue === opt.value;
+                return (
+                  <button
+                    key={opt.value}
+                    onClick={() => handleSelect(opt.value)}
+                    className={`bg-white border-2 p-4 rounded-2xl shadow-sm active:scale-95 active:border-[#004481] transition-all flex flex-col items-center justify-center hover:border-[#004481] h-20 ${
+                      isSelected ? 'border-[#004481] bg-[#e6f8ff]' : 'border-gray-200'
+                    }`}
+                  >
+                    <span className="text-xl font-black text-[#004481]">{opt.value}</span>
+                    <span className="text-[9px] font-black uppercase text-gray-400 mt-1">{opt.label}</span>
+                  </button>
+                );
+              })}
            </div>
-           
-           <button
-             onClick={() => handleSelect(OPTIONS[4].value)}
-             className="w-full bg-white border-2 border-gray-200 p-5 rounded-2xl shadow-sm active:scale-95 active:border-[#004481] transition-all flex flex-col items-center justify-center hover:border-[#004481] h-20"
-           >
-             <span className="text-2xl font-black text-[#004481]">{OPTIONS[4].value}</span>
-             <span className="text-[10px] font-black uppercase text-gray-400 mt-1">{OPTIONS[4].label}</span>
-           </button>
+
+           {(() => {
+             const isSelectedLarge = selectedValue === OPTIONS[4].value;
+             return (
+               <button
+                 onClick={() => handleSelect(OPTIONS[4].value)}
+                 className={`w-full p-5 rounded-2xl shadow-sm active:scale-95 transition-all flex flex-col items-center justify-center hover:border-[#004481] h-20 ${
+                   isSelectedLarge ? 'border-[#004481] bg-[#e6f8ff]' : 'border-2 border-gray-200 bg-white'
+                 }`}
+               >
+                 <span className="text-2xl font-black text-[#004481]">{OPTIONS[4].value}</span>
+                 <span className="text-[10px] font-black uppercase text-gray-400 mt-1">{OPTIONS[4].label}</span>
+               </button>
+             );
+           })()}
 
            <div className="text-center pt-2 pb-6">
              {isKioskMode && (
