@@ -25,14 +25,17 @@ const SECURITY_QUESTIONS = [
   "Nome da primeira escola?"
 ];
 
-const AdminPanel: React.FC<AdminPanelProps> = ({ 
+// URL do seu manual em PDF no Firebase Storage
+const PDF_MANUAL_URL = "https://firebasestorage.googleapis.com/v0/b/app-1-educa-mente.firebasestorage.app/o/Manual%20app.pdf?alt=media&token=c7431702-5bd9-4404-a42b-78b3891adaf8";
+
+const AdminPanel: React.FC<AdminPanelProps> = ({
   company, allCompanies, responses, onRegister, onUpdateCompany, onResetPassword, onLogin, onUpdateSectors, onToggleKiosk, isKioskMode, onLogout, initialView = 'login'
 }) => {
   const [view, setView] = useState<'login' | 'register' | 'edit' | 'recovery_cnpj' | 'recovery_question' | 'recovery_reset' | 'dashboard'>(initialView);
   const [showPassword, setShowPassword] = useState(false);
   const [newSector, setNewSector] = useState('');
   const [isFetchingCep, setIsFetchingCep] = useState(false);
-  
+
   const [loginCode, setLoginCode] = useState('');
   const [loginPass, setLoginPass] = useState('');
 
@@ -55,8 +58,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
     }
   }, [initialView, company]);
 
-  const companyResponses = useMemo(() => 
-    responses.filter(r => r.companyId === company?.id), 
+  const companyResponses = useMemo(() =>
+    responses.filter(r => r.companyId === company?.id),
     [responses, company]
   );
 
@@ -99,7 +102,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
         } else {
           alert("CEP não encontrado na base de dados dos Correios.");
         }
-      } catch (e) { 
+      } catch (e) {
         console.error("Erro ao buscar CEP:", e);
         alert("Erro ao conectar com o serviço de busca de CEP.");
       } finally {
@@ -121,19 +124,19 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
 
   const handleExportCSV = () => {
     if (!company) return;
-    
+
     const headers = [
-      "RAZAO_SOCIAL", 
-      "CNPJ", 
+      "RAZAO_SOCIAL",
+      "CNPJ",
       "EMAIL",
-      "TELEFONE_FIXO", 
-      "TELEFONE_CELULAR", 
+      "TELEFONE_FIXO",
+      "TELEFONE_CELULAR",
       "ENDERECO_COMPLETO",
-      "CIDADE", 
-      "UF", 
-      "SETOR", 
+      "CIDADE",
+      "UF",
+      "SETOR",
       "FUNCAO",
-      "DATA_RESPOSTA", 
+      "DATA_RESPOSTA",
       ...QUESTIONS.map(q => `P${q.id}`)
     ];
 
@@ -143,7 +146,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
       const fullAddress = `${company.logradouro}, ${company.numero} - ${company.bairro}`;
       const emailPlaceholder = (company as any).email || "";
       const answers = QUESTIONS.map(q => r.answers[q.id] !== undefined ? r.answers[q.id] : 0);
-      
+
       return [
         `"${company.razaoSocial || ''}"`,
         `"${company.cnpj || ''}"`,
@@ -185,6 +188,11 @@ Use esse código para acessar a Avaliação: ${company.accessCode}`;
 
     const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
     window.open(url, '_blank');
+  };
+
+  // Nova função para abrir o manual em PDF
+  const handleOpenManual = () => {
+    window.open(PDF_MANUAL_URL, '_blank');
   };
 
   const handleStartEdit = () => {
@@ -239,8 +247,8 @@ Use esse código para acessar a Avaliação: ${company.accessCode}`;
               <h3 className="text-[10px] font-black uppercase text-gray-400 mb-1">Engajamento</h3>
               <p className="text-xs font-black text-indigo-600 uppercase">Convidar Colaboradores</p>
             </div>
-            <button 
-              onClick={handleShareWhatsApp} 
+            <button
+              onClick={handleShareWhatsApp}
               className="bg-[#25D366] text-white px-5 py-3 rounded-2xl text-[10px] font-black uppercase shadow-lg hover:scale-105 transition-all mt-4 flex items-center justify-center gap-2 w-full"
             >
               Convidar via WhatsApp
@@ -252,11 +260,25 @@ Use esse código para acessar a Avaliação: ${company.accessCode}`;
               <h3 className="text-[10px] font-black uppercase text-gray-400 mb-1">Gerenciamento</h3>
               <p className="text-xs font-black text-amber-500 uppercase tracking-tight">Alterar Dados Cadastrais</p>
             </div>
-            <button 
+            <button
               onClick={handleStartEdit}
               className="bg-amber-100 text-amber-700 px-5 py-3 rounded-2xl text-[10px] font-black uppercase shadow-sm hover:scale-105 transition-all mt-4 w-full"
             >
               Editar Cadastro
+            </button>
+          </div>
+
+          {/* NOVO BOTÃO PARA O MANUAL EM PDF */}
+          <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm flex flex-col justify-between">
+            <div>
+              <h3 className="text-[10px] font-black uppercase text-gray-400 mb-1">Documentação</h3>
+              <p className="text-xs font-black text-blue-600 uppercase tracking-tight">Acessar Manual do Sistema</p>
+            </div>
+            <button
+              onClick={handleOpenManual}
+              className="bg-blue-500 text-white px-5 py-3 rounded-2xl text-[10px] font-black uppercase shadow-lg hover:scale-105 transition-all mt-4 w-full"
+            >
+              Abrir Manual (PDF)
             </button>
           </div>
         </div>
@@ -266,7 +288,7 @@ Use esse código para acessar a Avaliação: ${company.accessCode}`;
               <h3 className="text-[10px] font-black uppercase text-gray-400 mb-1 tracking-widest">Modo de Acesso</h3>
               <p className="text-xs font-black text-[#004481] uppercase">{isKioskMode ? 'Modo Quiosque Ativo' : 'Acesso Individual'}</p>
             </div>
-            <button 
+            <button
               onClick={onToggleKiosk}
               className={`px-5 py-3 rounded-2xl text-[10px] font-black uppercase transition-all shadow-md ${isKioskMode ? 'bg-orange-500 text-white' : 'bg-gray-100 text-gray-400'}`}
             >
@@ -276,18 +298,18 @@ Use esse código para acessar a Avaliação: ${company.accessCode}`;
 
         <div className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm">
           <h3 className="text-sm font-black text-gray-900 uppercase tracking-widest mb-6">Gerenciamento de Setores</h3>
-          
+
           <div className="flex gap-2 mb-6">
             <div className="flex-1 relative">
-              <input 
-                type="text" 
-                value={newSector} 
-                onChange={e => setNewSector(e.target.value)} 
+              <input
+                type="text"
+                value={newSector}
+                onChange={e => setNewSector(e.target.value)}
                 onKeyDown={e => { if(e.key === 'Enter') handleAddSector(); }}
-                placeholder="Ex: PRODUÇÃO, RH, VENDAS..." 
-                className="input-field pr-16 uppercase font-black" 
+                placeholder="Ex: PRODUÇÃO, RH, VENDAS..."
+                className="input-field pr-16 uppercase font-black"
               />
-              <button 
+              <button
                 onClick={handleAddSector}
                 className="absolute right-2 top-1/2 -translate-y-1/2 bg-[#004481] text-white w-10 h-10 rounded-xl flex items-center justify-center shadow-lg hover:scale-110 active:scale-90 transition-all z-10"
                 title="Adicionar Setor"
@@ -303,8 +325,8 @@ Use esse código para acessar a Avaliação: ${company.accessCode}`;
             {(company.sectors || []).map(s => (
               <div key={s.id} className="p-3 bg-gray-50 rounded-xl flex justify-between items-center border border-gray-100 group hover:border-[#004481]/30">
                 <span className="text-[9px] font-black text-gray-700 uppercase">{s.name}</span>
-                <button 
-                  onClick={() => onUpdateSectors(company.sectors.filter(x => x.id !== s.id))} 
+                <button
+                  onClick={() => onUpdateSectors(company.sectors.filter(x => x.id !== s.id))}
                   className="text-gray-300 hover:text-red-500 text-[14px] font-black transition-colors"
                 >
                   ×
@@ -318,7 +340,7 @@ Use esse código para acessar a Avaliação: ${company.accessCode}`;
             )}
           </div>
         </div>
-        
+
         <button onClick={onLogout} className="w-full text-center text-red-500 font-black text-[10px] uppercase tracking-widest pt-4 hover:underline">Sair do Sistema</button>
       </div>
     );
@@ -355,7 +377,7 @@ Use esse código para acessar a Avaliação: ${company.accessCode}`;
             e.preventDefault();
             if(formData.password !== formData.confirmPassword) return alert("Senhas não conferem!");
             const { confirmPassword, ...rest } = formData;
-            
+
             if (view === 'edit') {
                onUpdateCompany(rest);
                alert("Alterações salvas com sucesso!");
