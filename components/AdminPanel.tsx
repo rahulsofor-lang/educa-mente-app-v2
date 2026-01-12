@@ -6,7 +6,6 @@ interface AdminPanelProps {
   company: Company | null;
   allCompanies: Company[];
   responses: SurveyResponse[];
-  // Fix: changed return type to string | Promise<string> to allow async registration functions
   onRegister: (data: Omit<Company, 'id' | 'accessCode' | 'status'>) => string | Promise<string>;
   onUpdateCompany: (data: Partial<Company>) => void;
   onResetPassword: (id: string, newPass: string) => void;
@@ -25,11 +24,21 @@ const SECURITY_QUESTIONS = [
   "Nome da primeira escola?"
 ];
 
-// URL do seu manual em PDF no Firebase Storage
 const PDF_MANUAL_URL = "https://firebasestorage.googleapis.com/v0/b/app-1-educa-mente.firebasestorage.app/o/Manual%20app.pdf?alt=media&token=c7431702-5bd9-4404-a42b-78b3891adaf8";
 
 const AdminPanel: React.FC<AdminPanelProps> = ({
-  company, allCompanies, responses, onRegister, onUpdateCompany, onResetPassword, onLogin, onUpdateSectors, onToggleKiosk, isKioskMode, onLogout, initialView = 'login'
+  company,
+  allCompanies,
+  responses,
+  onRegister,
+  onUpdateCompany,
+  onResetPassword,
+  onLogin,
+  onUpdateSectors,
+  onToggleKiosk,
+  isKioskMode,
+  onLogout,
+  initialView = 'login'
 }) => {
   const [view, setView] = useState<'login' | 'register' | 'edit' | 'recovery_cnpj' | 'recovery_question' | 'recovery_reset' | 'dashboard'>(initialView);
   const [showPassword, setShowPassword] = useState(false);
@@ -46,10 +55,22 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
   const [confirmNewPass, setConfirmNewPass] = useState('');
 
   const [formData, setFormData] = useState({
-    razaoSocial: '', nomeFantasia: '', cnpj: '', cep: '',
-    logradouro: '', numero: '', bairro: '', cidade: '', uf: '',
-    telefoneFixo: '', telefoneCelular: '', totalEmployees: 0,
-    password: '', confirmPassword: '', securityQuestion: SECURITY_QUESTIONS[0], securityAnswer: ''
+    razaoSocial: '',
+    nomeFantasia: '',
+    cnpj: '',
+    cep: '',
+    logradouro: '',
+    numero: '',
+    bairro: '',
+    cidade: '',
+    uf: '',
+    telefoneFixo: '',
+    telefoneCelular: '',
+    totalEmployees: 0,
+    password: '',
+    confirmPassword: '',
+    securityQuestion: SECURITY_QUESTIONS[0],
+    securityAnswer: ''
   });
 
   useEffect(() => {
@@ -58,29 +79,28 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
     }
   }, [initialView, company]);
 
-  const companyResponses = useMemo(() =>
-    responses.filter(r => r.companyId === company?.id),
+  const companyResponses = useMemo(
+    () => responses.filter(r => r.companyId === company?.id),
     [responses, company]
   );
 
   const applyMask = (value: string, type: 'cnpj' | 'cep' | 'phone') => {
-    let v = value.replace(/\D/g, '');
-    if (type === 'cnpj') {
-      v = v.slice(0, 14);
-      return v.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
-    }
-    if (type === 'cep') {
-      v = v.slice(0, 8);
-      return v.replace(/^(\d{5})(\d{3})/, "$1-$2");
-    }
-    if (type === 'phone') {
-      v = v.slice(0, 11);
-      if (v.length > 10) return v.replace(/^(\d{2})(\d{5})(\d{4})/, "($1) $2-$3");
-      return v.replace(/^(\d{2})(\d{4})(\d{4})/, "($1) $2-$3");
-    }
-    return v;
-  };
-
+  let v = value.replace(/\D/g, '');
+  if (type === 'cnpj') {
+    v = v.slice(0, 14);
+    return v.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
+  }
+  if (type === 'cep') {
+    v = v.slice(0, 8);
+    return v.replace(/^(\d{5})(\d{3})$/, '$1-$2');
+  }
+  if (type === 'phone') {
+    v = v.slice(0, 11);
+    if (v.length > 10) return v.replace(/^(\d{2})(\d{5})(\d{4})$/, '($1) $2-$3');
+    return v.replace(/^(\d{2})(\d{4})(\d{4})$/, '($1) $2-$3');
+  }
+  return v;
+};
   const handleCepChange = async (value: string) => {
     const masked = applyMask(value, 'cep');
     setFormData(prev => ({ ...prev, cep: masked }));
@@ -91,7 +111,21 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
       try {
         const res = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
         const data = await res.json();
-        if (!data.erro) {
+
+        if (data.erro) {
+          alert('CEP não encontrado. Você pode preencher o endereço manualmente.');
+          setFormData(prev => ({
+            ...prev,
+            logradouro: '',
+            bairro: '',
+            cidade: '',
+            uf: ''
+          }));
+          setTimeout(() => {
+            const logInput = document.querySelector('input[name="logradouro"]') as HTMLInputElement | null;
+            if (logInput) logInput.focus();
+          }, 100);
+        } else {
           setFormData(prev => ({
             ...prev,
             logradouro: data.logradouro || '',
@@ -99,12 +133,25 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
             cidade: data.localidade || '',
             uf: data.uf || ''
           }));
-        } else {
-          alert("CEP não encontrado na base de dados dos Correios.");
+          setTimeout(() => {
+            const numInput = document.querySelector('input[name="numero"]') as HTMLInputElement | null;
+            if (numInput) numInput.focus();
+          }, 100);
         }
       } catch (e) {
-        console.error("Erro ao buscar CEP:", e);
-        alert("Erro ao conectar com o serviço de busca de CEP.");
+        console.error('Erro ao buscar CEP:', e);
+        alert('Erro ao conectar com o serviço de CEP. Você pode preencher o endereço manualmente.');
+        setFormData(prev => ({
+          ...prev,
+          logradouro: '',
+          bairro: '',
+          cidade: '',
+          uf: ''
+        }));
+        setTimeout(() => {
+          const logInput = document.querySelector('input[name="logradouro"]') as HTMLInputElement | null;
+          if (logInput) logInput.focus();
+        }, 100);
       } finally {
         setIsFetchingCep(false);
       }
@@ -115,10 +162,13 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
     if (!company || !newSector.trim()) return;
     const existingSectors = company.sectors || [];
     if (existingSectors.find(s => s.name === newSector.trim().toUpperCase())) {
-      alert("Este setor já foi adicionado.");
+      alert('Este setor já foi adicionado.');
       return;
     }
-    onUpdateSectors([...existingSectors, { id: Date.now().toString(), name: newSector.trim().toUpperCase() }]);
+    onUpdateSectors([
+      ...existingSectors,
+      { id: Date.now().toString(), name: newSector.trim().toUpperCase() }
+    ]);
     setNewSector('');
   };
 
@@ -126,17 +176,17 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
     if (!company) return;
 
     const headers = [
-      "RAZAO_SOCIAL",
-      "CNPJ",
-      "EMAIL",
-      "TELEFONE_FIXO",
-      "TELEFONE_CELULAR",
-      "ENDERECO_COMPLETO",
-      "CIDADE",
-      "UF",
-      "SETOR",
-      "FUNCAO",
-      "DATA_RESPOSTA",
+      'RAZAO_SOCIAL',
+      'CNPJ',
+      'EMAIL',
+      'TELEFONE_FIXO',
+      'TELEFONE_CELULAR',
+      'ENDERECO_COMPLETO',
+      'CIDADE',
+      'UF',
+      'SETOR',
+      'FUNCAO',
+      'DATA_RESPOSTA',
       ...QUESTIONS.map(q => `P${q.id}`)
     ];
 
@@ -144,7 +194,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
       const sector = company.sectors.find(s => s.id === r.sectorId)?.name || 'N/A';
       const date = new Date(r.completedAt).toLocaleDateString('pt-BR');
       const fullAddress = `${company.logradouro}, ${company.numero} - ${company.bairro}`;
-      const emailPlaceholder = (company as any).email || "";
+      const emailPlaceholder = (company as any).email || '';
       const answers = QUESTIONS.map(q => r.answers[q.id] !== undefined ? r.answers[q.id] : 0);
 
       return [
@@ -160,13 +210,13 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
         `"${r.jobFunction || 'N/A'}"`,
         `"${date}"`,
         ...answers
-      ].join(";");
+      ].join(';');
     });
 
-    const csvContent = "\ufeff" + [headers.join(";"), ...rows].join("\n");
+    const csvContent = '\ufeff' + [headers.join(';'), ...rows].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
+    const link = document.createElement('a');
     link.href = url;
     link.download = `relatorio_nr01_${company.nomeFantasia.toLowerCase().replace(/\s/g, '_')}.csv`;
     link.click();
@@ -175,14 +225,14 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
 
   const handleShareWhatsApp = () => {
     if (!company) return;
-            const vercelAppLink = "https://educa-mente-app-v2.vercel.app"; // Seu link do Vercel
-        const text = `Olá equipe ${company.nomeFantasia}! 🚀
+    const vercelAppLink = 'https://educa-mente-app-v2.vercel.app';
+    const text = `Olá equipe ${company.nomeFantasia}! 
 
-Acesse o link abaixo, baixe o app e participe da Avaliação de Riscos Psicossociais da NR-1. Assim você contribui para o bem-estar da nossa empresa. 🧠💙
+Acesse o link abaixo, baixe o app e participe da Avaliação de Riscos Psicossociais da NR-1. Assim você contribui para o bem-estar da nossa empresa.
 
-Sua participação é essencial para essa virada de chave! 🚀
+Sua participação é essencial para essa virada de chave!
 
-🔗 Link de Acesso: ${vercelAppLink}
+Link de Acesso: ${vercelAppLink}
 
 Use esse código para acessar a Avaliação: ${company.accessCode}`;
 
@@ -190,7 +240,6 @@ Use esse código para acessar a Avaliação: ${company.accessCode}`;
     window.open(url, '_blank');
   };
 
-  // Nova função para abrir o manual em PDF
   const handleOpenManual = () => {
     window.open(PDF_MANUAL_URL, '_blank');
   };
@@ -237,9 +286,13 @@ Use esse código para acessar a Avaliação: ${company.accessCode}`;
           <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm flex flex-col justify-between">
             <div>
               <h3 className="text-[10px] font-black uppercase text-gray-400 mb-1">Dados Coletados</h3>
-              <p className="text-3xl font-black text-gray-900">{companyResponses.length} <span className="text-sm font-bold text-gray-300">/ {company.totalEmployees}</span></p>
+              <p className="text-3xl font-black text-gray-900">
+                {companyResponses.length} <span className="text-sm font-bold text-gray-300">/ {company.totalEmployees}</span>
+              </p>
             </div>
-            <button onClick={handleExportCSV} className="bg-emerald-500 text-white px-5 py-3 rounded-2xl text-[10px] font-black uppercase shadow-lg hover:scale-105 transition-all mt-4 w-full">Baixar CSV Completo</button>
+            <button onClick={handleExportCSV} className="bg-emerald-500 text-white px-5 py-3 rounded-2xl text-[10px] font-black uppercase shadow-lg hover:scale-105 transition-all mt-4 w-full">
+              Baixar CSV Completo
+            </button>
           </div>
 
           <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm flex flex-col justify-between">
@@ -247,10 +300,7 @@ Use esse código para acessar a Avaliação: ${company.accessCode}`;
               <h3 className="text-[10px] font-black uppercase text-gray-400 mb-1">Engajamento</h3>
               <p className="text-xs font-black text-indigo-600 uppercase">Convidar Colaboradores</p>
             </div>
-            <button
-              onClick={handleShareWhatsApp}
-              className="bg-[#25D366] text-white px-5 py-3 rounded-2xl text-[10px] font-black uppercase shadow-lg hover:scale-105 transition-all mt-4 flex items-center justify-center gap-2 w-full"
-            >
+            <button onClick={handleShareWhatsApp} className="bg-[#25D366] text-white px-5 py-3 rounded-2xl text-[10px] font-black uppercase shadow-lg hover:scale-105 transition-all mt-4 flex items-center justify-center gap-2 w-full">
               Convidar via WhatsApp
             </button>
           </div>
@@ -260,88 +310,69 @@ Use esse código para acessar a Avaliação: ${company.accessCode}`;
               <h3 className="text-[10px] font-black uppercase text-gray-400 mb-1">Gerenciamento</h3>
               <p className="text-xs font-black text-amber-500 uppercase tracking-tight">Alterar Dados Cadastrais</p>
             </div>
-            <button
-              onClick={handleStartEdit}
-              className="bg-amber-100 text-amber-700 px-5 py-3 rounded-2xl text-[10px] font-black uppercase shadow-sm hover:scale-105 transition-all mt-4 w-full"
-            >
+            <button onClick={handleStartEdit} className="bg-amber-100 text-amber-700 px-5 py-3 rounded-2xl text-[10px] font-black uppercase shadow-sm hover:scale-105 transition-all mt-4 w-full">
               Editar Cadastro
             </button>
           </div>
 
-          {/* NOVO BOTÃO PARA O MANUAL EM PDF */}
           <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm flex flex-col justify-between">
             <div>
               <h3 className="text-[10px] font-black uppercase text-gray-400 mb-1">Documentação</h3>
               <p className="text-xs font-black text-blue-600 uppercase tracking-tight">Acessar Manual do Sistema</p>
             </div>
-            <button
-              onClick={handleOpenManual}
-              className="bg-blue-500 text-white px-5 py-3 rounded-2xl text-[10px] font-black uppercase shadow-lg hover:scale-105 transition-all mt-4 w-full"
-            >
+            <button onClick={handleOpenManual} className="bg-blue-500 text-white px-5 py-3 rounded-2xl text-[10px] font-black uppercase shadow-lg hover:scale-105 transition-all mt-4 w-full">
               Abrir Manual (PDF)
             </button>
           </div>
         </div>
 
         <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm flex items-center justify-between">
-            <div>
-              <h3 className="text-[10px] font-black uppercase text-gray-400 mb-1 tracking-widest">Modo de Acesso</h3>
-              <p className="text-xs font-black text-[#004481] uppercase">{isKioskMode ? 'Modo Quiosque Ativo' : 'Acesso Individual'}</p>
-            </div>
-            <button
-              onClick={onToggleKiosk}
-              className={`px-5 py-3 rounded-2xl text-[10px] font-black uppercase transition-all shadow-md ${isKioskMode ? 'bg-orange-500 text-white' : 'bg-gray-100 text-gray-400'}`}
-            >
-              {isKioskMode ? 'Desativar Quiosque' : 'Ativar Quiosque'}
-            </button>
+          <div>
+            <h3 className="text-[10px] font-black uppercase text-gray-400 mb-1 tracking-widest">Modo de Acesso</h3>
+            <p className="text-xs font-black text-[#004481] uppercase">{isKioskMode ? 'Modo Quiosque Ativo' : 'Acesso Individual'}</p>
+          </div>
+          <button onClick={onToggleKiosk} className={`px-5 py-3 rounded-2xl text-[10px] font-black uppercase transition-all shadow-md ${isKioskMode ? 'bg-orange-500 text-white' : 'bg-gray-100 text-gray-400'}`}>
+            {isKioskMode ? 'Desativar Quiosque' : 'Ativar Quiosque'}
+          </button>
         </div>
 
         <div className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm">
           <h3 className="text-sm font-black text-gray-900 uppercase tracking-widest mb-6">Gerenciamento de Setores</h3>
-
           <div className="flex gap-2 mb-6">
             <div className="flex-1 relative">
               <input
                 type="text"
                 value={newSector}
                 onChange={e => setNewSector(e.target.value)}
-                onKeyDown={e => { if(e.key === 'Enter') handleAddSector(); }}
+                onKeyDown={e => { if (e.key === 'Enter') handleAddSector(); }}
                 placeholder="Ex: PRODUÇÃO, RH, VENDAS..."
                 className="input-field pr-16 uppercase font-black"
               />
-              <button
-                onClick={handleAddSector}
-                className="absolute right-2 top-1/2 -translate-y-1/2 bg-[#004481] text-white w-10 h-10 rounded-xl flex items-center justify-center shadow-lg hover:scale-110 active:scale-90 transition-all z-10"
-                title="Adicionar Setor"
-              >
+              <button onClick={handleAddSector} className="absolute right-2 top-1/2 -translate-y-1/2 bg-[#004481] text-white w-10 h-10 rounded-xl flex items-center justify-center shadow-lg hover:scale-110 active:scale-90 transition-all z-10" title="Adicionar Setor">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M12 4v16m8-8H4" />
                 </svg>
               </button>
             </div>
           </div>
-
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {(company.sectors || []).map(s => (
               <div key={s.id} className="p-3 bg-gray-50 rounded-xl flex justify-between items-center border border-gray-100 group hover:border-[#004481]/30">
                 <span className="text-[9px] font-black text-gray-700 uppercase">{s.name}</span>
-                <button
-                  onClick={() => onUpdateSectors(company.sectors.filter(x => x.id !== s.id))}
-                  className="text-gray-300 hover:text-red-500 text-[14px] font-black transition-colors"
-                >
-                  ×
-                </button>
+                <button onClick={() => onUpdateSectors(company.sectors.filter(x => x.id !== s.id))} className="text-gray-300 hover:text-red-500 text-[14px] font-black transition-colors">×</button>
               </div>
             ))}
             {(company.sectors || []).length === 0 && (
-               <div className="col-span-full py-10 text-center text-[10px] font-black uppercase text-gray-300 italic border-2 border-dashed border-gray-50 rounded-2xl">
-                  Nenhum setor cadastrado. Use o campo acima para adicionar.
-               </div>
+              <div className="col-span-full py-10 text-center text-[10px] font-black uppercase text-gray-300 italic border-2 border-dashed border-gray-50 rounded-2xl">
+                Nenhum setor cadastrado. Use o campo acima para adicionar.
+              </div>
             )}
           </div>
         </div>
 
-        <button onClick={onLogout} className="w-full text-center text-red-500 font-black text-[10px] uppercase tracking-widest pt-4 hover:underline">Sair do Sistema</button>
+        <button onClick={onLogout} className="w-full text-center text-red-500 font-black text-[10px] uppercase tracking-widest pt-4 hover:underline">
+          Sair do Sistema
+        </button>
       </div>
     );
   }
@@ -355,11 +386,11 @@ Use esse código para acessar a Avaliação: ${company.accessCode}`;
             <input value={loginCode} onChange={e => setLoginCode(e.target.value)} placeholder="CÓDIGO UNIDADE" className="input-field text-center font-black tracking-widest" />
             <div className="relative">
               <input type={showPassword ? 'text' : 'password'} value={loginPass} onChange={e => setLoginPass(e.target.value)} placeholder="SENHA" className="input-field text-center font-black" />
-              <button onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-4 text-gray-400">
-                {showPassword ? '👁️' : '🙈'}
-              </button>
+              <button onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-4 text-gray-400">{showPassword ? '👁️' : '🙈'}</button>
             </div>
-            <button onClick={() => { if(!onLogin(loginCode, loginPass)) alert('Acesso Negado'); }} className="btn-premium bg-[#004481] text-white w-full py-5">Entrar no Painel</button>
+            <button onClick={() => { if (!onLogin(loginCode, loginPass)) alert('Acesso Negado'); }} className="btn-premium bg-[#004481] text-white w-full py-5">
+              Entrar no Painel
+            </button>
             <div className="flex flex-col gap-3 pt-4">
               <button onClick={() => setView('register')} className="text-[10px] font-black uppercase text-[#004481]">Não tem cadastro? Registrar Unidade</button>
               <button onClick={() => setView('recovery_cnpj')} className="text-[10px] font-black uppercase text-gray-400">Esqueci minha senha</button>
@@ -374,29 +405,28 @@ Use esse código para acessar a Avaliação: ${company.accessCode}`;
             {view === 'edit' ? 'Editar Dados da Unidade' : 'Registrar Nova Unidade'}
           </h2>
           <form className="space-y-4 max-h-[70vh] overflow-y-auto px-2 custom-scrollbar" onSubmit={e => {
-            e.preventDefault();
-            if(formData.password !== formData.confirmPassword) return alert("Senhas não conferem!");
-            const { confirmPassword, ...rest } = formData;
-
-            if (view === 'edit') {
-               onUpdateCompany(rest);
-               alert("Alterações salvas com sucesso!");
-               setView('dashboard');
-            } else {
-               onRegister({ ...rest, sectors: [] });
-            }
-          }}>
+              e.preventDefault();
+              if (formData.password !== formData.confirmPassword) return alert('Senhas não conferem!');
+              const { confirmPassword, ...rest } = formData;
+              if (view === 'edit') {
+                onUpdateCompany(rest);
+                alert('Alterações salvas com sucesso!');
+                setView('dashboard');
+              } else {
+                onRegister({ ...rest, sectors: [] });
+              }
+            }}>
             <div className="space-y-1">
               <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest px-2">Razão Social</label>
-              <input required placeholder="Razão Social" value={formData.razaoSocial} onChange={e => setFormData({...formData, razaoSocial: e.target.value})} className="input-field" />
+              <input required placeholder="Razão Social" value={formData.razaoSocial} onChange={e => setFormData({ ...formData, razaoSocial: e.target.value })} className="input-field" />
             </div>
             <div className="space-y-1">
               <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest px-2">Nome Fantasia</label>
-              <input required placeholder="Nome Fantasia" value={formData.nomeFantasia} onChange={e => setFormData({...formData, nomeFantasia: e.target.value})} className="input-field" />
+              <input required placeholder="Nome Fantasia" value={formData.nomeFantasia} onChange={e => setFormData({ ...formData, nomeFantasia: e.target.value })} className="input-field" />
             </div>
             <div className="space-y-1">
               <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest px-2">CNPJ</label>
-              <input required placeholder="CNPJ" value={formData.cnpj} onChange={e => setFormData({...formData, cnpj: applyMask(e.target.value, 'cnpj')})} className="input-field" />
+              <input required placeholder="CNPJ" value={formData.cnpj} onChange={e => setFormData({ ...formData, cnpj: applyMask(e.target.value, 'cnpj') })} className="input-field" />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1 relative">
@@ -406,48 +436,48 @@ Use esse código para acessar a Avaliação: ${company.accessCode}`;
               </div>
               <div className="space-y-1">
                 <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest px-2">Número</label>
-                <input required placeholder="Número" value={formData.numero} onChange={e => setFormData({...formData, numero: e.target.value})} className="input-field" />
+                <input required name="numero" placeholder="Número" value={formData.numero} onChange={e => setFormData({ ...formData, numero: e.target.value })} className="input-field" />
               </div>
             </div>
-            <input required placeholder="Logradouro" value={formData.logradouro} readOnly className="input-field bg-gray-50 opacity-70" />
-            <input required placeholder="Bairro" value={formData.bairro} readOnly className="input-field bg-gray-50 opacity-70" />
+            <input required name="logradouro" placeholder="Logradouro" value={formData.logradouro} onChange={e => setFormData({ ...formData, logradouro: e.target.value })} className="input-field" />
+            <input required name="bairro" placeholder="Bairro" value={formData.bairro} onChange={e => setFormData({ ...formData, bairro: e.target.value })} className="input-field" />
             <div className="grid grid-cols-2 gap-4">
-              <input required placeholder="Cidade" value={formData.cidade} readOnly className="input-field bg-gray-50 opacity-70" />
-              <input required placeholder="UF" value={formData.uf} readOnly className="input-field bg-gray-50 opacity-70" />
+              <input required name="cidade" placeholder="Cidade" value={formData.cidade} onChange={e => setFormData({ ...formData, cidade: e.target.value })} className="input-field" />
+              <input required name="uf" placeholder="UF" value={formData.uf} onChange={e => setFormData({ ...formData, uf: e.target.value.toUpperCase() })} className="input-field" maxLength={2} />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
                 <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest px-2">Tel. Fixo</label>
-                <input required placeholder="Telefone Fixo" value={formData.telefoneFixo} onChange={e => setFormData({...formData, telefoneFixo: applyMask(e.target.value, 'phone')})} className="input-field" />
+                <input required placeholder="Telefone Fixo" value={formData.telefoneFixo} onChange={e => setFormData({ ...formData, telefoneFixo: applyMask(e.target.value, 'phone') })} className="input-field" />
               </div>
               <div className="space-y-1">
                 <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest px-2">Celular</label>
-                <input required placeholder="Celular" value={formData.telefoneCelular} onChange={e => setFormData({...formData, telefoneCelular: applyMask(e.target.value, 'phone')})} className="input-field" />
+                <input required placeholder="Celular" value={formData.telefoneCelular} onChange={e => setFormData({ ...formData, telefoneCelular: applyMask(e.target.value, 'phone') })} className="input-field" />
               </div>
             </div>
             <div className="space-y-1">
               <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest px-2">Total de Funcionários</label>
-              <input required type="number" placeholder="Total de Funcionários" value={formData.totalEmployees || ''} onChange={e => setFormData({...formData, totalEmployees: parseInt(e.target.value) || 0})} className="input-field" />
+              <input required type="number" placeholder="Total de Funcionários" value={formData.totalEmployees || ''} onChange={e => setFormData({ ...formData, totalEmployees: parseInt(e.target.value) || 0 })} className="input-field" />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
                 <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest px-2">Senha</label>
-                <input required type="password" placeholder="Senha" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="input-field" />
+                <input required type="password" placeholder="Senha" value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} className="input-field" />
               </div>
               <div className="space-y-1">
                 <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest px-2">Confirmar</label>
-                <input required type="password" placeholder="Confirmar" value={formData.confirmPassword} onChange={e => setFormData({...formData, confirmPassword: e.target.value})} className="input-field" />
+                <input required type="password" placeholder="Confirmar" value={formData.confirmPassword} onChange={e => setFormData({ ...formData, confirmPassword: e.target.value })} className="input-field" />
               </div>
             </div>
             <div className="space-y-1 pt-2 border-t border-gray-100">
               <label className="text-[9px] font-black text-indigo-600 uppercase tracking-widest px-2">Pergunta de Segurança (Recuperação)</label>
-              <select className="input-field" value={formData.securityQuestion} onChange={e => setFormData({...formData, securityQuestion: e.target.value})}>
+              <select className="input-field" value={formData.securityQuestion} onChange={e => setFormData({ ...formData, securityQuestion: e.target.value })}>
                 {SECURITY_QUESTIONS.map(q => <option key={q} value={q}>{q}</option>)}
               </select>
-              <input required placeholder="Sua Resposta" value={formData.securityAnswer} onChange={e => setFormData({...formData, securityAnswer: e.target.value})} className="input-field" />
+              <input required placeholder="Sua Resposta" value={formData.securityAnswer} onChange={e => setFormData({ ...formData, securityAnswer: e.target.value })} className="input-field" />
             </div>
             <button type="submit" className="btn-premium bg-emerald-600 text-white w-full py-5 shadow-xl mt-4">
-               {view === 'edit' ? 'Salvar Alterações' : 'Concluir Registro'}
+              {view === 'edit' ? 'Salvar Alterações' : 'Concluir Registro'}
             </button>
             <button type="button" onClick={() => setView(view === 'edit' ? 'dashboard' : 'login')} className="w-full text-[10px] font-black uppercase text-gray-400 py-2">Cancelar</button>
           </form>
@@ -460,12 +490,12 @@ Use esse código para acessar a Avaliação: ${company.accessCode}`;
           <div className="space-y-4">
             <input value={recoveryCNPJ} onChange={e => setRecoveryCNPJ(applyMask(e.target.value, 'cnpj'))} placeholder="00.000.000/0000-00" className="input-field text-center font-black tracking-widest" />
             <button onClick={() => {
-              const cleanCNPJ = recoveryCNPJ.replace(/\D/g, '');
-              const found = allCompanies.find(c => c.cnpj.replace(/\D/g, '') === cleanCNPJ);
-              if (!found) return alert("Empresa não encontrada.");
-              setRecoveryCompany(found);
-              setView('recovery_question');
-            }} className="btn-premium bg-[#004481] text-white w-full py-5 shadow-xl">Continuar</button>
+                const cleanCNPJ = recoveryCNPJ.replace(/\D/g, '');
+                const found = allCompanies.find(c => c.cnpj.replace(/\D/g, '') === cleanCNPJ);
+                if (!found) return alert('Empresa não encontrada.');
+                setRecoveryCompany(found);
+                setView('recovery_question');
+              }} className="btn-premium bg-[#004481] text-white w-full py-5 shadow-xl">Continuar</button>
             <button onClick={() => setView('login')} className="w-full text-[10px] font-black uppercase text-gray-400 py-2">Voltar</button>
           </div>
         </div>
@@ -478,9 +508,9 @@ Use esse código para acessar a Avaliação: ${company.accessCode}`;
           <div className="space-y-4">
             <input value={recoveryAnswer} onChange={e => setRecoveryAnswer(e.target.value)} placeholder="SUA RESPOSTA" className="input-field text-center font-black" />
             <button onClick={() => {
-               if (recoveryAnswer.toLowerCase().trim() === recoveryCompany.securityAnswer.toLowerCase().trim()) setView('recovery_reset');
-               else alert("Incorreto.");
-            }} className="btn-premium bg-[#004481] text-white w-full py-5 shadow-xl">Verificar</button>
+                if (recoveryAnswer.toLowerCase().trim() === recoveryCompany.securityAnswer.toLowerCase().trim()) setView('recovery_reset');
+                else alert('Incorreto.');
+              }} className="btn-premium bg-[#004481] text-white w-full py-5 shadow-xl">Verificar</button>
           </div>
         </div>
       )}
@@ -492,11 +522,11 @@ Use esse código para acessar a Avaliação: ${company.accessCode}`;
             <input type="password" value={newPass} onChange={e => setNewPass(e.target.value)} placeholder="NOVA SENHA" className="input-field text-center font-black" />
             <input type="password" value={confirmNewPass} onChange={e => setConfirmNewPass(e.target.value)} placeholder="CONFIRMAR" className="input-field text-center font-black" />
             <button onClick={() => {
-              if (newPass !== confirmNewPass) return alert("Senhas diferentes.");
-              onResetPassword(recoveryCompany!.id, newPass);
-              alert("Senha alterada com sucesso! Acessando painel...");
-              // O login automático é tratado no App.tsx
-            }} className="btn-premium bg-emerald-500 text-white w-full py-5 shadow-xl">Salvar e Acessar Painel</button>
+                if (newPass !== confirmNewPass) return alert('Senhas diferentes.');
+                if (!recoveryCompany) return;
+                onResetPassword(recoveryCompany.id, newPass);
+                alert('Senha alterada com sucesso! Acessando painel...');
+              }} className="btn-premium bg-emerald-500 text-white w-full py-5 shadow-xl">Salvar e Acessar Painel</button>
           </div>
         </div>
       )}
