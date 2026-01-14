@@ -392,7 +392,7 @@ Use esse código para acessar a Avaliação: ${company.accessCode}`;
               Entrar no Painel
             </button>
             <div className="flex flex-col gap-3 pt-4">
-              <button onClick={() => setView('register')} className="text-[10px] font-black uppercase text-[#004481]">Não tem cadastro? Registrar Unidade</button>
+             
               <button onClick={() => setView('recovery_cnpj')} className="text-[10px] font-black uppercase text-gray-400">Esqueci minha senha</button>
             </div>
           </div>
