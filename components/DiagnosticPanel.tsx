@@ -79,38 +79,57 @@ const DiagnosticPanel: React.FC<DiagnosticPanelProps> = ({
   }, [selectedCompanyId, selectedSectorId, diagnosticReports]);
 
   const diagnosticData = useMemo(() => {
-    if (!selectedCompany) return null;
-    const filteredResponses = responses.filter(r =>
-      r.companyId === selectedCompanyId &&
-      (selectedSectorId === 'all' || r.sectorId === selectedSectorId)
-    );
+  if (!selectedCompany) return null;
+  const filteredResponses = responses.filter(r =>
+    r.companyId === selectedCompanyId &&
+    (selectedSectorId === 'all' || r.sectorId === selectedSectorId)
+  );
+  
+  return THEME_NAMES.map((label, themeIdx) => {
+    const start = themeIdx * 10;
+    const blockQuestions = QUESTIONS.slice(start, start + 10);
+    let blockSum = 0, blockCount = 0;
 
-    return THEME_NAMES.map((label, themeIdx) => {
-      const start = themeIdx * 10;
-      const blockQuestions = QUESTIONS.slice(start, start + 10);
-      let blockSum = 0, blockCount = 0;
-
-      blockQuestions.forEach(q => {
-        filteredResponses.forEach(r => {
-          if (r.answers[q.id] !== undefined) {
-            blockSum += getCorrectedScore(r.answers[q.id], q.isInverted);
-            blockCount++;
-          }
-        });
+    blockQuestions.forEach(q => {
+      filteredResponses.forEach(r => {
+        if (r.answers[q.id] !== undefined) {
+          blockSum += getCorrectedScore(r.answers[q.id], q.isInverted);
+          blockCount++;
+        }
       });
-
-      const avgGravity = blockCount > 0 ? blockSum / blockCount : 1.0;
-      const probValue = selectedSectorId !== 'all'
-        ? (probabilityAssessments[selectedCompanyId]?.[selectedSectorId]?.[themeIdx] || 2)
-        : 2;
-
-      return {
-        themeIdx, label, avgGravity, probValue,
-        risk: calculateMatrixRisk(avgGravity, probValue)
-      };
     });
-  }, [selectedCompanyId, selectedSectorId, responses, probabilityAssessments]);
 
+    const avgGravity = blockCount > 0 ? blockSum / blockCount : 1.0;
+
+    // ✅ NOVO CÓDIGO: ARREDONDAMENTO AUTOMÁTICO
+    let probValue = 1; // Valor padrão
+
+if (avgGravity > 1 && avgGravity <= 2) {
+  probValue = 2;
+} else if (avgGravity > 2 && avgGravity <= 3) {
+  probValue = 3;
+} else if (avgGravity > 3) {
+  probValue = 4;
+}
+    return {
+      themeIdx, label, avgGravity, probValue,
+      risk: calculateMatrixRisk(avgGravity, probValue)
+    };
+  });
+}, [selectedCompanyId, selectedSectorId, responses, probabilityAssessments]);
+useEffect(() => {
+  if (!diagnosticData || selectedSectorId === 'all') return;
+
+  const autoCalculatedScores: { [topicIdx: number]: number } = {};
+
+  diagnosticData.forEach((theme) => {
+    autoCalculatedScores[theme.themeIdx] = theme.probValue;
+  });
+
+  // Salva no Firebase automaticamente
+  onSaveProbability(selectedCompanyId, selectedSectorId, autoCalculatedScores);
+
+}, [diagnosticData, selectedCompanyId, selectedSectorId]);
   const radarData = useMemo(() => diagnosticData?.map(d => ({
     subject: d.label, A: d.avgGravity, fullMark: 3
   })), [diagnosticData]);
