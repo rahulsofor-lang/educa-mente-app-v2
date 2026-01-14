@@ -117,19 +117,33 @@ if (avgGravity > 1 && avgGravity <= 2) {
     };
   });
 }, [selectedCompanyId, selectedSectorId, responses, probabilityAssessments]);
+// ✅ SALVA AUTOMATICAMENTE A PROBABILIDADE ARREDONDADA NO FIREBASE (SEM LOOP)
 useEffect(() => {
   if (!diagnosticData || selectedSectorId === 'all') return;
 
   const autoCalculatedScores: { [topicIdx: number]: number } = {};
+  let hasChanges = false;
 
   diagnosticData.forEach((theme) => {
-    autoCalculatedScores[theme.themeIdx] = theme.probValue;
+    const currentValue = probabilityAssessments[selectedCompanyId]?.[selectedSectorId]?.[theme.themeIdx];
+    const newValue = theme.probValue;
+
+    // Só salva se o valor mudou
+    if (currentValue !== newValue) {
+      hasChanges = true;
+    }
+
+    autoCalculatedScores[theme.themeIdx] = newValue;
   });
 
-  // Salva no Firebase automaticamente
-  onSaveProbability(selectedCompanyId, selectedSectorId, autoCalculatedScores);
+  // Só salva se houver mudanças
+  if (hasChanges) {
+    console.log('🔄 Salvando probabilidades arredondadas:', autoCalculatedScores);
+    onSaveProbability(selectedCompanyId, selectedSectorId, autoCalculatedScores);
+  }
 
-}, [diagnosticData, selectedCompanyId, selectedSectorId]);
+}, [diagnosticData, selectedCompanyId, selectedSectorId, probabilityAssessments]);
+
   const radarData = useMemo(() => diagnosticData?.map(d => ({
     subject: d.label, A: d.avgGravity, fullMark: 3
   })), [diagnosticData]);
