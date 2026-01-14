@@ -78,71 +78,80 @@ const DiagnosticPanel: React.FC<DiagnosticPanelProps> = ({
     }
   }, [selectedCompanyId, selectedSectorId, diagnosticReports]);
 
+  // ✅ CÁLCULO CORRETO: GRAVIDADE NÃO ARREDONDA, PROBABILIDADE SIM
   const diagnosticData = useMemo(() => {
-  if (!selectedCompany) return null;
-  const filteredResponses = responses.filter(r =>
-    r.companyId === selectedCompanyId &&
-    (selectedSectorId === 'all' || r.sectorId === selectedSectorId)
-  );
-  
-  return THEME_NAMES.map((label, themeIdx) => {
-    const start = themeIdx * 10;
-    const blockQuestions = QUESTIONS.slice(start, start + 10);
-    let blockSum = 0, blockCount = 0;
+    if (!selectedCompany) return null;
+    const filteredResponses = responses.filter(r =>
+      r.companyId === selectedCompanyId &&
+      (selectedSectorId === 'all' || r.sectorId === selectedSectorId)
+    );
 
-    blockQuestions.forEach(q => {
-      filteredResponses.forEach(r => {
-        if (r.answers[q.id] !== undefined) {
-          blockSum += getCorrectedScore(r.answers[q.id], q.isInverted);
-          blockCount++;
-        }
+    return THEME_NAMES.map((label, themeIdx) => {
+      const start = themeIdx * 10;
+      const blockQuestions = QUESTIONS.slice(start, start + 10);
+      let blockSum = 0, blockCount = 0;
+
+      blockQuestions.forEach(q => {
+        filteredResponses.forEach(r => {
+          if (r.answers[q.id] !== undefined) {
+            blockSum += getCorrectedScore(r.answers[q.id], q.isInverted);
+            blockCount++;
+          }
+        });
       });
+
+      // ✅ GRAVIDADE: MANTÉM ORIGINAL (NÃO ARREDONDA)
+      const avgGravity = blockCount > 0 ? blockSum / blockCount : 1.0;
+
+      // ✅ PROBABILIDADE: Busca do Firebase OU arredonda automaticamente
+      let probValue = probabilityAssessments[selectedCompanyId]?.[selectedSectorId]?.[themeIdx];
+
+      // Se NÃO existe valor salvo, arredonda automaticamente
+      if (!probValue && selectedSectorId !== 'all') {
+        if (avgGravity <= 2) {
+          probValue = 2;
+        } else if (avgGravity <= 3) {
+          probValue = 3;
+        } else {
+          probValue = 4;
+        }
+      } else if (!probValue) {
+        probValue = 2; // Valor padrão para visão geral
+      }
+
+      return {
+        themeIdx, label, avgGravity, probValue,
+        risk: calculateMatrixRisk(avgGravity, probValue)
+      };
+    });
+  }, [selectedCompanyId, selectedSectorId, responses, probabilityAssessments]);
+
+  // ✅ SALVAMENTO AUTOMÁTICO: Salva APENAS se houver mudanças
+  useEffect(() => {
+    if (!diagnosticData || selectedSectorId === 'all') return;
+
+    const autoCalculatedScores: { [topicIdx: number]: number } = {};
+    let hasChanges = false;
+
+    diagnosticData.forEach((theme) => {
+      const currentValue = probabilityAssessments[selectedCompanyId]?.[selectedSectorId]?.[theme.themeIdx];
+      const newValue = theme.probValue;
+
+      // Só marca como "mudou" se o valor for diferente
+      if (currentValue !== newValue) {
+        hasChanges = true;
+      }
+
+      autoCalculatedScores[theme.themeIdx] = newValue;
     });
 
-    const avgGravity = blockCount > 0 ? blockSum / blockCount : 1.0;
-
-    // ✅ NOVO CÓDIGO: ARREDONDAMENTO AUTOMÁTICO
-    let probValue = 1; // Valor padrão
-
-if (avgGravity > 1 && avgGravity <= 2) {
-  probValue = 2;
-} else if (avgGravity > 2 && avgGravity <= 3) {
-  probValue = 3;
-} else if (avgGravity > 3) {
-  probValue = 4;
-}
-    return {
-      themeIdx, label, avgGravity, probValue,
-      risk: calculateMatrixRisk(avgGravity, probValue)
-    };
-  });
-}, [selectedCompanyId, selectedSectorId, responses, probabilityAssessments]);
-// ✅ SALVA AUTOMATICAMENTE A PROBABILIDADE ARREDONDADA NO FIREBASE (SEM LOOP)
-useEffect(() => {
-  if (!diagnosticData || selectedSectorId === 'all') return;
-
-  const autoCalculatedScores: { [topicIdx: number]: number } = {};
-  let hasChanges = false;
-
-  diagnosticData.forEach((theme) => {
-    const currentValue = probabilityAssessments[selectedCompanyId]?.[selectedSectorId]?.[theme.themeIdx];
-    const newValue = theme.probValue;
-
-    // Só salva se o valor mudou
-    if (currentValue !== newValue) {
-      hasChanges = true;
+    // Só salva se houver mudanças
+    if (hasChanges) {
+      console.log('🔄 Salvando probabilidades arredondadas:', autoCalculatedScores);
+      onSaveProbability(selectedCompanyId, selectedSectorId, autoCalculatedScores);
     }
 
-    autoCalculatedScores[theme.themeIdx] = newValue;
-  });
-
-  // Só salva se houver mudanças
-  if (hasChanges) {
-    console.log('🔄 Salvando probabilidades arredondadas:', autoCalculatedScores);
-    onSaveProbability(selectedCompanyId, selectedSectorId, autoCalculatedScores);
-  }
-
-}, [diagnosticData, selectedCompanyId, selectedSectorId, probabilityAssessments]);
+  }, [diagnosticData, selectedCompanyId, selectedSectorId, probabilityAssessments]);
 
   const radarData = useMemo(() => diagnosticData?.map(d => ({
     subject: d.label, A: d.avgGravity, fullMark: 3
