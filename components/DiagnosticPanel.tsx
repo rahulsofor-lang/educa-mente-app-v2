@@ -78,7 +78,6 @@ const DiagnosticPanel: React.FC<DiagnosticPanelProps> = ({
     }
   }, [selectedCompanyId, selectedSectorId, diagnosticReports]);
 
-  // ✅ CÁLCULO CORRETO: 9 TEMAS (0 a 8)
   const diagnosticData = useMemo(() => {
     if (!selectedCompany) return null;
     const filteredResponses = responses.filter(r =>
@@ -86,8 +85,7 @@ const DiagnosticPanel: React.FC<DiagnosticPanelProps> = ({
       (selectedSectorId === 'all' || r.sectorId === selectedSectorId)
     );
 
-    // ✅ APENAS 9 TEMAS (slice de 0 a 9)
-    return THEME_NAMES.slice(0, 9).map((label, themeIdx) => {
+    return THEME_NAMES.map((label, themeIdx) => {
       const start = themeIdx * 10;
       const blockQuestions = QUESTIONS.slice(start, start + 10);
       let blockSum = 0, blockCount = 0;
@@ -101,25 +99,10 @@ const DiagnosticPanel: React.FC<DiagnosticPanelProps> = ({
         });
       });
 
-      // ✅ GRAVIDADE: MANTÉM ORIGINAL (NÃO ARREDONDA)
       const avgGravity = blockCount > 0 ? blockSum / blockCount : 1.0;
-
-      // ✅ PROBABILIDADE: Busca do Firebase usando formato correto
-      const documentId = `${selectedCompanyId}_${selectedSectorId}`;
-      let probValue = probabilityAssessments[documentId]?.pontuações?.[themeIdx];
-
-      // Se NÃO existe valor salvo, arredonda automaticamente
-      if (!probValue && selectedSectorId !== 'all') {
-        if (avgGravity <= 2) {
-          probValue = 2;
-        } else if (avgGravity <= 3) {
-          probValue = 3;
-        } else {
-          probValue = 4;
-        }
-      } else if (!probValue) {
-        probValue = 2; // Valor padrão para visão geral
-      }
+      const probValue = selectedSectorId !== 'all'
+        ? (probabilityAssessments[selectedCompanyId]?.[selectedSectorId]?.[themeIdx] || 2)
+        : 2;
 
       return {
         themeIdx, label, avgGravity, probValue,
@@ -127,34 +110,6 @@ const DiagnosticPanel: React.FC<DiagnosticPanelProps> = ({
       };
     });
   }, [selectedCompanyId, selectedSectorId, responses, probabilityAssessments]);
-
-  // ✅ SALVAMENTO AUTOMÁTICO: Salva APENAS se houver mudanças
-  useEffect(() => {
-    if (!diagnosticData || selectedSectorId === 'all') return;
-
-    const documentId = `${selectedCompanyId}_${selectedSectorId}`;
-    const autoCalculatedScores: { [topicIdx: number]: number } = {};
-    let hasChanges = false;
-
-    diagnosticData.forEach((theme) => {
-      const currentValue = probabilityAssessments[documentId]?.pontuações?.[theme.themeIdx];
-      const newValue = theme.probValue;
-
-      // Só marca como "mudou" se o valor for diferente
-      if (currentValue !== newValue) {
-        hasChanges = true;
-      }
-
-      autoCalculatedScores[theme.themeIdx] = newValue;
-    });
-
-    // Só salva se houver mudanças
-    if (hasChanges) {
-      console.log('🔄 Salvando probabilidades arredondadas:', autoCalculatedScores);
-      onSaveProbability(selectedCompanyId, selectedSectorId, autoCalculatedScores);
-    }
-
-  }, [diagnosticData, selectedCompanyId, selectedSectorId, probabilityAssessments, onSaveProbability]);
 
   const radarData = useMemo(() => diagnosticData?.map(d => ({
     subject: d.label, A: d.avgGravity, fullMark: 3
@@ -504,30 +459,25 @@ const DiagnosticPanel: React.FC<DiagnosticPanelProps> = ({
                       Probabilidade (P)
                     </p>
                     <div className="grid grid-cols-4 gap-2">
-                      {[1, 2, 3, 4].map(v => {
-                        const documentId = `${selectedCompanyId}_${selectedSectorId}`;
-                        const currentProb = probabilityAssessments[documentId]?.pontuações?.[activeThemeIdx] || 2;
-
-                        return (
-                          <button
-                            key={v}
-                            onClick={() =>
-                              selectedSectorId !== 'all' &&
-                              onSaveProbability(selectedCompanyId, selectedSectorId, {
-                                ...(probabilityAssessments[documentId]?.pontuações || {}),
-                                [activeThemeIdx]: v
-                              })
-                            }
-                            className={`py-3 rounded-xl text-xs font-black transition-all ${
-                              currentProb === v
-                                ? 'bg-[#004481] text-white'
-                                : 'bg-white text-gray-300 border border-gray-100 hover:border-[#004481]'
-                            }`}
-                          >
-                            {v}
-                          </button>
-                        );
-                      })}
+                      {[1, 2, 3, 4].map(v => (
+                        <button
+                          key={v}
+                          onClick={() =>
+                            selectedSectorId !== 'all' &&
+                            onSaveProbability(selectedCompanyId, selectedSectorId, {
+                              ...(probabilityAssessments[selectedCompanyId]?.[selectedSectorId] || {}),
+                              [activeThemeIdx]: v
+                            })
+                          }
+                          className={`py-3 rounded-xl text-xs font-black transition-all ${
+                            (probabilityAssessments[selectedCompanyId]?.[selectedSectorId]?.[activeThemeIdx] || 2) === v
+                              ? 'bg-[#004481] text-white'
+                              : 'bg-white text-gray-300 border border-gray-100 hover:border-[#004481]'
+                          }`}
+                        >
+                          {v}
+                        </button>
+                      ))}
                     </div>
                   </div>
                 </div>
