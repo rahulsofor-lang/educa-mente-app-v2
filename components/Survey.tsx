@@ -88,8 +88,22 @@ const Survey: React.FC<SurveyProps> = ({
           </div>
           <div className="space-y-1">
             <label className="text-[10px] font-black text-gray-400 uppercase">Função/Cargo</label>
-            <input value={jobFunction} onChange={e => setJobFunction(e.target.value)} placeholder="Ex: Operador" className="input-field uppercase font-black" required />
-          </div>
+            <select
+  value={jobFunction}
+  onChange={e => setJobFunction(e.target.value)}
+  className="input-field uppercase font-black"
+  required
+>
+  <option value="">Selecione sua função...</option>
+
+  {(currentCompany?.functions || []).map((func, index) => (
+    <option key={index} value={func}>
+      {func}
+    </option>
+  ))}
+</select>
+
+                      </div>
           <button disabled={!sectorId || !jobFunction} onClick={() => setStep('questions')} className="btn-premium bg-[#004481] text-white w-full py-4 shadow-xl disabled:opacity-30">Começar Questionário</button>
         </div>
       </div>

@@ -43,6 +43,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
   const [view, setView] = useState<'login' | 'register' | 'edit' | 'recovery_cnpj' | 'recovery_question' | 'recovery_reset' | 'dashboard'>(initialView);
   const [showPassword, setShowPassword] = useState(false);
   const [newSector, setNewSector] = useState('');
+  const [newFunction, setNewFunction] = useState(''); // ✅ ADICIONE ESTA LINHA
   const [isFetchingCep, setIsFetchingCep] = useState(false);
 
   const [loginCode, setLoginCode] = useState('');
@@ -170,6 +171,18 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
       { id: Date.now().toString(), name: newSector.trim().toUpperCase() }
     ]);
     setNewSector('');
+  };
+  // ✅ FUNÇÕES PARA GERENCIAR FUNÇÕES (NOVO)
+  const handleAddFunction = () => {
+    if (!newFunction.trim()) return;
+    const updated = [...(company.functions || []), newFunction.toUpperCase()];
+    onUpdateCompany({ functions: updated }); // Usa onUpdateCompany para salvar no Firebase
+    setNewFunction('');
+  };
+
+  const handleRemoveFunction = (idx: number) => {
+    const updated = (company.functions || []).filter((_, i) => i !== idx);
+    onUpdateCompany({ functions: updated }); // Usa onUpdateCompany para salvar no Firebase
   };
 
   const handleExportCSV = () => {
@@ -369,6 +382,43 @@ Use esse código para acessar a Avaliação: ${company.accessCode}`;
             )}
           </div>
         </div>
+                {/* =============================================== */}
+        {/* GERENCIAMENTO DE FUNÇÕES (NOVO) */}
+        {/* =============================================== */}
+        <div className="mb-8 p-6 border border-gray-200 rounded-xl shadow-sm">
+          <h3 className="text-sm font-black text-gray-900 uppercase tracking-widest mb-6">Gerenciamento de Funções</h3>
+          <div className="flex gap-2 mb-6">
+            <div className="flex-1 relative">
+              <input
+                type="text"
+                value={newFunction}
+                onChange={e => setNewFunction(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') handleAddFunction(); }}
+                placeholder="Ex: OPERADOR, SUPERVISOR, ANALISTA..."
+                className="input-field pr-16 uppercase font-black"
+              />
+              <button onClick={handleAddFunction} className="absolute right-2 top-1/2 -translate-y-1/2 bg-[#004481] text-white w-10 h-10 rounded-xl flex items-center justify-center shadow-lg hover:scale-110 active:scale-90 transition-all z-10" title="Adicionar Função">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M12 4v16m8-8H4" />
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {(company.functions || []).map((func, idx) => (
+              <div key={idx} className="p-3 bg-gray-50 rounded-xl flex justify-between items-center border border-gray-100 group hover:border-[#004481]/30">
+                <span className="text-[9px] font-black text-gray-700 uppercase">{func}</span>
+                <button onClick={() => handleRemoveFunction(idx)} className="text-gray-300 hover:text-red-500 text-[14px] font-black transition-colors">×</button>
+              </div>
+            ))}
+            {(company.functions || []).length === 0 && (
+              <div className="col-span-full py-10 text-center text-[10px] font-black uppercase text-gray-300 italic border-2 border-dashed border-gray-50 rounded-2xl">
+                Nenhuma função cadastrada. Use o campo acima para adicionar.
+              </div>
+            )}
+          </div>
+        </div>
+
 
         <button onClick={onLogout} className="w-full text-center text-red-500 font-black text-[10px] uppercase tracking-widest pt-4 hover:underline">
           Sair do Sistema

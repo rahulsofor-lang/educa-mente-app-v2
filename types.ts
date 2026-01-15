@@ -1,3 +1,8 @@
+// types.ts
+
+// =============================================================================
+// ENUMS E TIPOS BÁSICOS (CONSOLIDADOS)
+// =============================================================================
 
 export enum CompanyStatus {
   ABERTO = 'Aberto',
@@ -14,7 +19,7 @@ export enum ScoreLevel {
 }
 
 /**
- * NR-01 Risk levels (Matrix result)
+ * NR-01 Risk levels (Matrix result) - Reintroduzido como ENUM para compatibilidade
  */
 export enum RiskLevel {
   BAIXO = 'Baixo',
@@ -23,6 +28,10 @@ export enum RiskLevel {
   CRITICO = 'Crítico'
 }
 
+// =============================================================================
+// INTERFACES BÁSICAS
+// =============================================================================
+
 export interface Sector {
   id: string;
   name: string;
@@ -30,73 +39,175 @@ export interface Sector {
 
 export interface Company {
   id: string;
-  razaoSocial: string;
   nomeFantasia: string;
+  razaoSocial: string;
   cnpj: string;
+  accessCode: string;
+  password: string;
   cep: string;
   logradouro: string;
   numero: string;
   bairro: string;
   cidade: string;
-  uf: string;
+  sectors: Sector[];
+  functions: string[]; // ✅ ADICIONADO: Lista de funções globais da empresa
+  totalEmployees?: number;
+  uf?: string;
+
+  // ✅ ADICIONADOS: Campos de telefone e segurança que estavam faltando
   telefoneFixo: string;
   telefoneCelular: string;
-  totalEmployees: number;
-  accessCode: string;
-  status: CompanyStatus;
-  sectors: Sector[];
-  password?: string;
   securityQuestion: string;
   securityAnswer: string;
+  status: CompanyStatus; // ✅ ADICIONADO: Status da empresa
 }
 
 export interface SurveyResponse {
   id: string;
   companyId: string;
-  completedAt: string;
   sectorId: string;
   jobFunction: string;
+  completedAt: string; // Ou Date, dependendo de como você armazena
   answers: { [questionId: number]: number };
+  respostas?: { topico: string; gravidadeNum: number }[];
 }
 
-// Alias de compatibilidade para evitar erro em arquivos órfãos no GitHub
-export type Evaluation = SurveyResponse;
+export interface ProbabilityAssessment {
+  id: string;
+  companyId: string;
+  sectorId: string;
+  scores: { [factorId: number]: number }; // Ex: { '0': 2, '1': 3, ... }
+}
 
-/**
- * Technical diagnostic report structure
- */
+// =============================================================================
+// INTERFACE DIAGNOSTIC REPORT
+// =============================================================================
+
 export interface DiagnosticReport {
-  timestamp: string;
-  author: string;
-  agravosSaude: string;
-  medidasControle: string;
-  fontesGeradoras: { [topicIdx: number]: string };
+  id?: string;
+  companyId: string;
+  sectorId: string;
   isMain?: boolean;
+
+  author?: string;
+  dataElaboracao?: string;
+  funcoes?: string[];
+
+  agravosSaude?: string;
+  medidasControle?: string;
+  conclusao?: string;
+
+  fontesGeradoras: { [factorId: number]: string };
+
+  createdAt?: Date | any;
+  updatedAt?: Date | any;
 }
 
-/**
- * State holding history of reports per company and sector
- */
-export type DiagnosticReportsState = {
-  [companyId: string]: {
-    [sectorId: string]: DiagnosticReport[];
-  };
-};
+// =============================================================================
+// INTERFACE PSYCHOLOGIST
+// =============================================================================
 
-/**
- * State holding probability scores (1-3) per company/sector/theme
- */
-export type ProbabilityAssessments = {
-  [companyId: string]: {
-    [sectorId: string]: {
-      [topicIdx: number]: number;
-    };
-  };
-};
+export interface Psychologist {
+  id: string;
+  nomeCompleto: string;
+  email: string;
+  crp: string;
+  telefone: string;
+  endereco?: string;
+  logradouro?: string;
+  numero?: string;
+  bairro?: string;
+  cidade?: string;
+  uf?: string;
+  senha?: string;
+  primeiroAcesso?: boolean;
+  perguntaSeguranca?: string;
+  respostaSeguranca?: string;
+}
 
-/**
- * Profile of the technical professional (Psychologist)
- */
+// =============================================================================
+// TIPOS E INTERFACES PARA ANÁLISE DE RISCO
+// =============================================================================
+
+export type SeverityLevel = 'Baixa' | 'Média' | 'Alta' | 'Crítica';
+export type ProbabilityLevel = 'Improvável' | 'Possível' | 'Provável';
+export type RiskMatrixLevel = 'Baixo' | 'Médio' | 'Alto' | 'Crítico'; // Mantido como type para flexibilidade
+
+export interface RiskFactor {
+  id: number;
+  key: string;
+  label: string;
+  startQuestion: number;
+  endQuestion: number;
+}
+
+export interface FactorAnalysis {
+  factor: RiskFactor;
+  gravidade: SeverityLevel;
+  gravidadeScore: number;
+  probabilidade: ProbabilityLevel;
+  probabilidadeScore: number;
+  matriz: RiskMatrixLevel;
+}
+
+export interface SectorAnalysisData {
+  company: Company;
+  sectorId: string;
+  sectorName: string;
+  funcoes: string[];
+  totalRespondentes: number;
+  dataElaboracao: string;
+  factors: FactorAnalysis[];
+
+  gravityStats: GravityStats;
+  riskMatrixStats: RiskMatrixStats;
+  themes: {
+    label: string;
+    avgGravity: number;
+    probValue: number;
+    risk: RiskMatrixLevel;
+  }[];
+}
+
+export interface RiskAnalysisResult {
+  topico: string;
+  fonteGeradora: string;
+  gravidade: number;
+  probabilidade: number;
+  risco: number;
+  classificacao: { texto: string; cor: string };
+}
+
+export interface Evaluation {
+  id: string;
+  companyId: string;
+  sectorId: string;
+  jobFunction: string;
+  completedAt: string;
+  respostas: { topico: string; gravidadeNum: number }[];
+}
+
+// =============================================================================
+// ESTATÍSTICAS
+// =============================================================================
+
+export interface GravityStats {
+  baixa: number;
+  media: number;
+  alta: number;
+}
+
+export interface RiskMatrixStats {
+  baixo: number;
+  medio: number;
+  alto: number;
+  critico: number;
+}
+
+// =============================================================================
+// TIPOS DO APP.TSX (PARA COMPATIBILIDADE)
+// =============================================================================
+
 export interface PsychologistProfile {
   nomeCompleto: string;
   crp: string;
@@ -109,3 +220,17 @@ export interface PsychologistProfile {
   cidade: string;
   uf: string;
 }
+
+export type ProbabilityAssessments = {
+  [companyId: string]: {
+    [sectorId: string]: {
+      [topicIdx: number]: number;
+    };
+  };
+};
+
+export type DiagnosticReportsState = {
+  [companyId: string]: {
+    [sectorId: string]: DiagnosticReport[];
+  };
+};

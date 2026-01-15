@@ -1,15 +1,16 @@
-
-import { initializeApp } from "firebase/app";
-import { 
-  getFirestore, 
-  collection, 
-  doc, 
-  setDoc, 
-  getDocs, 
-  onSnapshot, 
+import { initializeApp } from "firebase/app"; // ✅ ADICIONE ESTA LINHA
+import {
+  getFirestore,
+  collection,
+  doc,
+  setDoc,
+  getDocs,
+  getDoc,        // ✅ ADICIONE ESTA LINHA
+  onSnapshot,
   addDoc,
   updateDoc
 } from "firebase/firestore";
+
 import { firebaseConfig } from "../firebaseConfig";
 
 // Inicializa o Firebase
@@ -139,5 +140,37 @@ export const fetchPsychologistProfile = async () => {
   } catch (error) {
     console.error("❌ Erro ao buscar perfil RT:", error);
     return null;
+  }
+};
+// ===============================================
+// 🔹 SALVAR LISTA GLOBAL DE FUNÇÕES DA EMPRESA
+// ===============================================
+export const updateCompanyFunctions = async (companyId, functions) => {
+  try {
+    const ref = doc(db, collections.COMPANIES, companyId);
+    await updateDoc(ref, { functions });
+    console.log("✅ Funções atualizadas com sucesso:", functions);
+  } catch (error) {
+    console.error("❌ Erro ao atualizar funções:", error);
+    throw error;
+  }
+};
+
+// ===============================================
+// 🔹 BUSCAR LISTA GLOBAL DE FUNÇÕES DA EMPRESA
+// ===============================================
+export const fetchCompanyFunctions = async (companyId) => {
+  try {
+    const ref = doc(db, collections.COMPANIES, companyId);
+    const snap = await getDoc(ref);
+
+    if (snap.exists()) {
+      return snap.data().functions || [];
+    }
+
+    return [];
+  } catch (error) {
+    console.error("❌ Erro ao buscar funções:", error);
+    return [];
   }
 };
